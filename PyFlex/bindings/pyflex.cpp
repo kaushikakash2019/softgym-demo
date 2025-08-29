@@ -1,4 +1,4 @@
-#include <bindings/main.cpp>
+#include "main.cpp"
 #include <bindings/customisedAPI.h>
 #include "opengl/shader.h"
 

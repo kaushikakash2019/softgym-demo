@@ -18,6 +18,10 @@ class ClothEnv(FlexEnv):
         'stiff': [0.8, 1, 0.9],  # Stretch, Bend and Shear
     }
 
+    def get_current_config(self):
+        # shim: ensure cloth-based envs expose current_config
+        return getattr(self, 'current_config', None)
+
     def __init__(self, observation_mode, action_mode, num_picker=2, render_mode='particle', 
         picker_radius=0.02, picker_threshold=0.007, particle_radius=0.00625, mass=0.5,
         cloth_param=reserved_cloth_param,

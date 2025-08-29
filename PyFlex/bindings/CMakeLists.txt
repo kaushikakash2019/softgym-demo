@@ -1,46 +1,108 @@
-cmake_minimum_required(VERSION 3.5)
-project(PyFleX)
+cmake_minimum_required(VERSION 3.12)
+project(pyflex_bindings LANGUAGES C CXX)
 
-# set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-find_package(CUDA 9.0 REQUIRED)
+# pybind11 + Python
 find_package(pybind11 REQUIRED)
+if(NOT DEFINED PYTHON_EXECUTABLE)
+  message(FATAL_ERROR "Please pass -DPYTHON_EXECUTABLE=<path-to-python3.8>")
+endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG} -MMD -m64 -Wall -std=c++0x")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_FORCE_INLINES -fPIC -fpermissive -fno-strict-aliasing -O3")
+# Includes relative to this folder (bindings/)
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/opengl
+  ${CMAKE_CURRENT_SOURCE_DIR}/../core
+  ${CMAKE_CURRENT_SOURCE_DIR}/../render
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common
+  ${CMAKE_CURRENT_SOURCE_DIR}/../external/SDL2-2.0.4/include
+)
 
-set(ROOT $ENV{PYFLEXROOT})
-set(EXAMPLE_BIN pyflex)
+# Auto-collect core sources
+file(GLOB CORE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/../core/*.cpp")
 
-set(SOURCES ${SOURCES} ${ROOT}/bindings/pyflex.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/bindings/imgui.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/bindings/shadersDemoContext.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/aabbtree.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/core.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/extrude.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/maths.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/mesh.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/perlin.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/pfm.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/platform.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/png.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/sdf.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/tga.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/core/voxelize.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/bindings/opengl/imguiRenderGL.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/bindings/opengl/shader.cpp)
-set(SOURCES ${SOURCES} ${ROOT}/bindings/opengl/shadersGL.cpp)
+# Base binding source (must exist)
+set(BINDING_SRCS pyflex.cpp)
 
-set(FLEXHEADERS ${ROOT})
-set(FLEXLIB ${ROOT} ${ROOT}/lib/linux64 ${ROOT}/bindings ${ROOT}/external/SDL2-2.0.4/lib/x64)
+# Optional sources in bindings/ (add only if present)
+foreach(opt IN ITEMS imgui.cpp shadersDemoContext.cpp)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${opt}")
+    list(APPEND BINDING_SRCS "${opt}")
+  endif()
+endforeach()
 
-pybind11_add_module(${EXAMPLE_BIN} ${SOURCES})
-target_include_directories(${EXAMPLE_BIN} PRIVATE ${FLEXHEADERS})
-target_include_directories(${EXAMPLE_BIN} PRIVATE ${FLEXLIB})
-target_link_libraries(${EXAMPLE_BIN} PRIVATE EGL)
-target_link_libraries(${EXAMPLE_BIN} PRIVATE ${ROOT}/lib/linux64/NvFlexExtReleaseCUDA_x64.a)
-target_link_libraries(${EXAMPLE_BIN} PRIVATE ${ROOT}/lib/linux64/NvFlexReleaseCUDA_x64.a)
-target_link_libraries(${EXAMPLE_BIN} PRIVATE ${ROOT}/external/SDL2-2.0.4/lib/x64/libSDL2-2.0.so.0.4.0)
-target_link_libraries(${EXAMPLE_BIN} PRIVATE ${ROOT}/external/SDL2-2.0.4/lib/x64/libSDL2.a)
-target_link_libraries(${EXAMPLE_BIN} PRIVATE ${CUDA_LIBRARIES})
+# Optional OpenGL helper sources under bindings/opengl/
+foreach(opt IN ITEMS opengl/shader.cpp opengl/shadersGL.cpp opengl/imguiRenderGL.cpp)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${opt}")
+    list(APPEND BINDING_SRCS "${opt}")
+  endif()
+endforeach()
+
+# Build the pybind11 module
+pybind11_add_module(pyflex ${BINDING_SRCS} ${CORE_SRCS})
+
+# Link against EGL, Flex, SDL2, cudart (static if available)
+set(FLEX_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../lib/linux64")
+set(SDL_LIB_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/../external/SDL2-2.0.4/lib/x64")
+
+set(FLEX_LIBS)
+if(EXISTS "${FLEX_LIB_DIR}/NvFlexReleaseCUDA_x64.a")
+  list(APPEND FLEX_LIBS "${FLEX_LIB_DIR}/NvFlexReleaseCUDA_x64.a")
+endif()
+if(EXISTS "${FLEX_LIB_DIR}/NvFlexExtReleaseCUDA_x64.a")
+  list(APPEND FLEX_LIBS "${FLEX_LIB_DIR}/NvFlexExtReleaseCUDA_x64.a")
+endif()
+
+set(SDL_LIBS)
+if(EXISTS "${SDL_LIB_DIR}/libSDL2-2.0.so.0.4.0")
+  list(APPEND SDL_LIBS "${SDL_LIB_DIR}/libSDL2-2.0.so.0.4.0")
+endif()
+if(EXISTS "${SDL_LIB_DIR}/libSDL2.a")
+  list(APPEND SDL_LIBS "${SDL_LIB_DIR}/libSDL2.a")
+endif()
+
+find_library(EGL_LIB EGL)
+# Try to find static cudart; optional
+find_library(CUDART_STATIC libcudart_static.a
+  PATHS /usr/local/cuda/lib64 /opt/cuda/lib64
+  NO_DEFAULT_PATH)
+
+target_link_libraries(pyflex PRIVATE
+  ${EGL_LIB}
+  ${FLEX_LIBS}
+  ${SDL_LIBS}
+  ${CUDART_STATIC}
+  dl pthread)
+
+# Help the .so find conda libs at runtime
+if(DEFINED ENV{CONDA_PREFIX})
+  set_target_properties(pyflex PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ENV{CONDA_PREFIX}/lib")
+endif()
+
+# Relax some warnings for older Flex code
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(pyflex PRIVATE -fpermissive -Wno-deprecated-declarations)
+endif()
+
+
+# Extra include dirs so Flex + EGL headers are found
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/..                 # PyFlex root (for include/NvFlex.h)
+  ${CMAKE_CURRENT_SOURCE_DIR}/../include        # Flex headers directly
+  /usr/include
+  /usr/include/EGL
+)
+
+# Also expose Conda's sysroot include (EGL headers) if present
+if(DEFINED ENV{CONDA_PREFIX})
+  include_directories(
+    $ENV{CONDA_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include
+    $ENV{CONDA_PREFIX}/x86_64-conda-linux-gnu/sysroot/usr/include/EGL
+  )
+endif()
 

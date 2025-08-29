@@ -10,8 +10,8 @@
 
 namespace py = pybind11;
 
-#include "include/NvFlex.h"
-#include "include/NvFlexExt.h"
+#include "../include/NvFlex.h"
+#include "../include/NvFlexExt.h"
 #include "include/NvFlexDevice.h"
 
 #include "core/maths.h"

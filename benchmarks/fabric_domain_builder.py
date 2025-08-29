@@ -273,7 +273,7 @@ class FabricDomainBuilder():
         config = {}
 
         if domain == 'mono-square-fabric':
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['cached_states_path'] = "mono_square_fabric.pkl"
             config['eval_tiers'] = {
                 4: [0, 10, 15, 20, 22, 25, 26, 27, 30, 31, 34, 35, 38, 39, 41, 42, 53, 56, 59, 60, 72, 75, 81, 87, 88, 90, 94],
@@ -292,7 +292,7 @@ class FabricDomainBuilder():
         
         
         elif domain == 'rainbow-rect-fabric':
-            config['num_variations'] = 5000
+            config['num_variations'] = 10
             config['cached_states_path'] = "rainbow_rect_fabric.pkl"
             config['eval_tiers'] = {
                 
@@ -319,7 +319,7 @@ class FabricDomainBuilder():
             config['video_episodes'] = [8, 206, 37, 55, 177, 216, 6, 109, 1, 22, 0, 136, 21, 68]
         
         elif domain == 'rainbow-square-fabric':
-            config['num_variations'] = 2000
+            config['num_variations'] = 10
             config['cached_states_path'] = "rainbow_square_fabric.pkl"
             config['eval_tiers'] = {
                 
@@ -339,60 +339,60 @@ class FabricDomainBuilder():
         
         
         elif domain == 'vcd-rect-fabric':
-            config['num_variations'] = 30
+            config['num_variations'] = 10
             config['cached_states_path'] = "vcd_rect_fabric.pkl"
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
         
         elif domain == 'vcd-square-fabric':
-            config['num_variations'] = 30
+            config['num_variations'] = 10
             config['cached_states_path'] = "vcd_square_fabric.pkl"
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
 
         elif domain in ['sim2real-rect-fabric', 'sim2real-square-fabric']:
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['cached_states_path'] = "{}.pkl".format(domain)
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i+30 for i in range(3)]
         
         elif domain == "ffn-rect-fabric":
-            config['num_variations'] = 30
+            config['num_variations'] = 10
             config['cached_states_path'] = "vcd_square_fabric.pkl"
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
         elif domain == "ffn-square-fabric":
-            config['num_variations'] = 30
+            config['num_variations'] = 10
 
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
         
         elif domain == "ffnm-rect-fabric":
-            config['num_variations'] = 30
+            config['num_variations'] = 10
 
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
         
         elif domain == "ffnm-square-fabric":
-            config['num_variations'] = 30
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
         
         elif domain == "ffmr-square-fabric":
-            config['num_variations'] = 40
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
         
         elif domain == "ffmr-rect-fabric":
-            config['num_variations'] = 40
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
@@ -529,7 +529,7 @@ class FabricDomainBuilder():
 
         elif initial_state == 'flatten':
             config['use_cached_states'] = False
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             #config['eval_tiers'][0][24] = 31
             config['video_episodes'] = [i for i in range(10)]
@@ -562,11 +562,11 @@ class FabricDomainBuilder():
             }
             config['video_episodes'] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             config['use_cached_states'] = False
-            config['num_variations'] = 100
+            config['num_variations'] = 10
         
         elif initial_state == 'centre-flatten':
             config['use_cached_states'] = False
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]
@@ -920,7 +920,7 @@ class FabricDomainBuilder():
         config = {}
 
         if domain == 'mono-square-fabric':
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['cached_states_path'] = "mono-square-fabric.pkl"
             config['eval_tiers'] = {
                 4: [0, 10, 15, 20, 22, 25, 26, 27, 30, 31, 34, 35, 38, 39, 41, 42, 53, 56, 59, 60, 72, 75, 81, 87, 88, 90, 94],
@@ -939,7 +939,7 @@ class FabricDomainBuilder():
         
         
         elif domain == 'rainbow-rectangular-fabrics':
-            config['num_variations'] = 5000
+            config['num_variations'] = 10
             config['cached_states_path'] = "rainbow-rectangular-fabrics.pkl"
             config['eval_tiers'] = {
                 
@@ -966,7 +966,7 @@ class FabricDomainBuilder():
             config['video_episodes'] = [8, 206, 37, 55, 177, 216, 6, 109, 1, 22, 0, 136, 21, 68]
         
         elif domain == 'rainbow-square-fabrics':
-            config['num_variations'] = 2000
+            config['num_variations'] = 10
             config['cached_states_path'] = "rainbow-square-fabrics.pkl"
             config['eval_tiers'] = {
                 
@@ -986,7 +986,7 @@ class FabricDomainBuilder():
         
         
         elif domain in ['realadapt-towels', 'realadapt-towels-sq']:
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['cached_states_path'] = "{}.pkl".format(domain)
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
@@ -1127,7 +1127,7 @@ class FabricDomainBuilder():
 
         elif initial_state == 'flattened':
             config['use_cached_states'] = False
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             #config['eval_tiers'][0][24] = 31
             config['video_episodes'] = [i for i in range(10)]
@@ -1144,7 +1144,7 @@ class FabricDomainBuilder():
         
         elif initial_state == 'random_flattened':
             config['use_cached_states'] = False
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [30+i for i in range(3)]
@@ -1177,11 +1177,11 @@ class FabricDomainBuilder():
             }
             config['video_episodes'] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
             config['use_cached_states'] = False
-            config['num_variations'] = 100
+            config['num_variations'] = 10
         
         elif initial_state == 'centre-flattened':
             config['use_cached_states'] = False
-            config['num_variations'] = 1000
+            config['num_variations'] = 10
             config['eval_tiers'] = { 0: [i for i in range(30)] }
             config['video_episodes'] = [i for i in range(10)]
             config['val_episodes'] = [i for i in range(3)]

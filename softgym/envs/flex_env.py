@@ -126,24 +126,22 @@ class FlexEnv(gym.Env):
 
         #print(cached_states_path, osp.exists(cached_states_path))
         
-        if self.use_cached_states and osp.exists(cached_states_path):
-            # Load from cached file
-            with open(cached_states_path, "rb") as handle:
-                self.cached_configs, self.cached_init_states = pickle.load(handle)
-            logging.info('[softgym, flex-env] {} config and state pairs loaded from {}'.format(len(self.cached_init_states), cached_states_path))
-            if len(self.cached_configs) >= num_variations:
-                return self.cached_configs, self.cached_init_states
-
         self.cached_configs, self.cached_init_states = self.generate_env_variation(num_variations)
         if self.save_cached_states:
+            import os
+            os.makedirs(os.path.dirname(cached_states_path), exist_ok=True)
             with open(cached_states_path, 'wb') as handle:
-                pickle.dump((self.cached_configs, self.cached_init_states), handle, protocol=pickle.HIGHEST_PROTOCOL)
-            logging.info('[softgym, flex-env]  config and state pairs generated and saved to {}'.format(len(self.cached_init_states), cached_states_path))
+                pickle.dump(
+                    (self.cached_configs, self.cached_init_states),
+                    handle,
+                    protocol=pickle.HIGHEST_PROTOCOL
+                )
+            logging.info('[softgym, flex-env] {} config and state pairs generated and saved to {}'.format(
+                len(self.cached_init_states), cached_states_path
+            ))
 
         return self.cached_configs, self.cached_init_states
 
-    def get_current_config(self):
-        return self.current_config
     
     def get_control_step_info(self):
         return self.control_step_info

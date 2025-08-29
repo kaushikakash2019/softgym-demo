@@ -1,3 +1,4 @@
+#include <cstdio>
 // This code contains NVIDIA Confidential Information and is disclosed to you
 // under a form of NVIDIA software license agreement provided separately to you.
 //
@@ -78,7 +79,7 @@ void glAssert(const char* msg, long line, const char* file)
 		}
 
 		printf("OpenGL: %s - error %s in %s at line %d\n", msg, errorName, file, int(line));
-		assert(0);
+		fprintf(stderr, "GL WARN: %s:%ld\n", file, (long)line); return;
 	}
 }
 

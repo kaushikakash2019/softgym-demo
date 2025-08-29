@@ -45,6 +45,11 @@
 
 #include "shader.h"
 
+static inline void setUniform1i(GLuint prog, const char* name, int v){
+    GLint loc = glGetUniformLocation(prog, name);
+    if (loc >= 0) glUniform1i(loc, v);
+}
+
 #ifdef ANDROID
 #include "android/Log.h"
 #include "android/AndroidDefine.h"
@@ -1291,7 +1296,8 @@ void DrawCloth(
 
 		// disable uv
 		glVerify(glDisableClientState(GL_TEXTURE_COORD_ARRAY));
-		glVerify(glUniform1i(glGetUniformLocation(s_diffuseProgram, "renderUV"), 0));
+    { GLint loc = glGetUniformLocation(s_diffuseProgram, "renderUV");
+      if (loc != -1) glUniform1i(loc, 0); }
 		
 		glVerify(glDrawElements(GL_TRIANGLES, numTris * 3, GL_UNSIGNED_INT, indices));
 
