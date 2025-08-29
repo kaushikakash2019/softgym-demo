@@ -1,0 +1,82 @@
+import os, json, math, textwrap
+from PIL import Image, ImageDraw, ImageFont
+import imageio.v3 as iio
+from tqdm import tqdm
+
+VIDEO_IN = "./results/realadapt-towels-flattening-crumpled/realadapt-OTS/manipulation/performance_visualisation/episode_0.mp4"
+CAP_JSON = "./captions/episode_0_frames.json"   # captions at 2 fps
+VIDEO_OUT = "./results/captioned/episode_0_captioned.mp4"
+CAP_FPS = 2.0   # must match the fps used when generating captions
+
+FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+]
+
+def pick_font(size=20):
+    for f in FONT_CANDIDATES:
+        if os.path.exists(f):
+            try:
+                return ImageFont.truetype(f, size=size)
+            except Exception:
+                pass
+    from PIL import ImageFont as IF
+    return IF.load_default()
+
+def wrap_text(txt, width):
+    lines = []
+    for para in txt.split("\n"):
+        para = para.strip()
+        lines += textwrap.wrap(para, width=width) or [""]
+    return lines
+
+def main():
+    os.makedirs(os.path.dirname(VIDEO_OUT), exist_ok=True)
+
+    with open(CAP_JSON) as f:
+        caps = json.load(f)  # list of {"frame":"frame_XXXX.png", "caption":"..."}
+
+    meta = iio.improbe(VIDEO_IN)
+    fps = meta["fps"]
+    nframes = meta.get("n_frames") or 0
+    if not nframes:
+        nframes = sum(1 for _ in iio.imiter(VIDEO_IN))
+
+    def caption_for_frame(i):
+        idx = int(math.floor(i * (CAP_FPS / fps)))
+        if idx < 0: idx = 0
+        if idx >= len(caps): idx = len(caps)-1
+        return caps[idx]["caption"]
+
+    font = pick_font(size=18)
+
+    writer = iio.imopen(VIDEO_OUT, "w", plugin="pyav")
+    writer.init_video_stream("h264", fps=fps, options={"crf":"18","preset":"medium"})
+
+    for i, frame in enumerate(tqdm(iio.imiter(VIDEO_IN), total=nframes, desc="Burning captions")):
+        img = Image.fromarray(frame)
+        W, H = img.size
+        cap = caption_for_frame(i)
+        wrap_cols = max(20, int(W/10))
+        lines = wrap_text(cap, width=wrap_cols)
+
+        draw = ImageDraw.Draw(img, "RGBA")
+        pad = 8
+        line_h = font.getbbox("Ag")[3] + 2
+        box_h = pad*2 + line_h*len(lines)
+        box_w = W - 20
+        x0, y0 = 10, H - box_h - 10
+        x1, y1 = x0 + box_w, y0 + box_h
+        draw.rectangle([x0, y0, x1, y1], fill=(0,0,0,140))
+        tx, ty = x0+pad, y0+pad
+        for ln in lines:
+            draw.text((tx, ty), ln, fill=(255,255,255,255), font=font)
+            ty += line_h
+
+        writer.write(img)
+
+    writer.close()
+    print(f"Done -> {VIDEO_OUT}")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,19 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 256
+PlayResY: 256
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Caption,DejaVu Sans,20,&H00FFFFFF,&H000000FF,&HAA000000,&HAA000000,0,0,0,0,100,100,0,0,1,2,0,9,10,10,10,0
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+
+Dialogue: 0,0:00:00.00,0:00:00.50,Caption,,0,0,0,,a white square with a yellow\Nrecal
+Dialogue: 0,0:00:00.50,0:00:01.00,Caption,,0,0,0,,a square with a white recal\Nand a yellow recal
+Dialogue: 0,0:00:01.00,0:00:01.50,Caption,,0,0,0,,a white and gray square with\Na small hole in the middle
+Dialogue: 0,0:00:01.50,0:00:02.00,Caption,,0,0,0,,a white paint swater with a\Nwhite paint swater
+Dialogue: 0,0:00:02.00,0:00:02.50,Caption,,0,0,0,,a white and gray square with\Na small hole in the middle
+Dialogue: 0,0:00:02.50,0:00:03.00,Caption,,0,0,0,,a square with a white recal\Npattern
+Dialogue: 0,0:00:03.00,0:00:03.50,Caption,,0,0,0,,a square with a white recal\Npattern
