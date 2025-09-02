@@ -6,6 +6,7 @@ import torch
 import cv2
 
 from transformers import BlipProcessor, BlipForConditionalGeneration
+from caption_clean import clean as clean_caption
 
 def normalize(t: str):
     t = t.lower()
@@ -39,6 +40,16 @@ def sample_frames_cv(video_path: str, target_fps: float):
         frames.append((idx, Image.fromarray(rgb)))
     cap.release()
     return fps, total, frames
+def center_crop(img, pct=0.8):
+    # img: numpy HxWx3
+    h, w = img.shape[:2]
+    ch, cw = int(h*pct), int(w*pct)
+    y0 = (h-ch)//2; x0 = (w-cw)//2
+    return img[y0:y0+ch, x0:x0+cw]
+
+# inside the loop over frames:
+cropped = center_crop(fr)  # <--- add
+pil = Image.fromarray(cropped)  # instead of Image.fromarray(fr)
 
 def caption_frames(frames: List[Tuple[int, Image.Image]], model_name: str, prompt: str, device: str):
     print("Step 2) Loading BLIP…")
@@ -154,6 +165,8 @@ def expand_to_all_frames(segments, total_frames):
     return out
 
 def main():
+    p.add_argument("--prompt", type=str, default="Describe the towel state for robot cloth manipulation. Use 'towel' not 'paper'. Mention wrinkles, folds, or flattening. Keep it factual and short.",
+               help="conditioning text")
     ap = argparse.ArgumentParser()
     ap.add_argument("--video", required=True)
     ap.add_argument("--out_json", required=True)
