@@ -1,119 +1,135 @@
-#!/usr/bin/env python3
-import os, json, argparse
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-import imageio.v3 as iio
-import imageio.v2 as iio_v2
 import imageio
-import imageio_ffmpeg as iio_ffmpeg
+import json, argparse, os, time
+import numpy as np
+import imageio.v3 as iio
+from PIL import Image, ImageDraw, ImageFont
 
-def load_font(size: int):
-    for p in [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Book.ttf",
-        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
-    ]:
-        if os.path.exists(p):
-            try:
-                return ImageFont.truetype(p, size)
-            except Exception:
-                pass
-    return ImageFont.load_default()
+DEF_FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
-def draw_caption(img: Image.Image, text: str, font: ImageFont.FreeTypeFont):
-    if not text:
-        return img
-    draw = ImageDraw.Draw(img, "RGBA")
-    pad, x, y = 8, 10, 10
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.rectangle([x - pad, y - pad, x + tw + pad, y + th + pad], fill=(0, 0, 0, 160))
-    draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
-    return img
-
-def probe_meta(video_path):
+def load_font(pt):
     try:
-        nframes, duration = iio_ffmpeg.count_frames_and_secs(video_path)
-        nframes = int(nframes) if nframes is not None else None
-        duration = float(duration) if duration not in (None, 0) else None
-        fps = (nframes / duration) if (nframes and duration) else 30.0
-        return float(fps), nframes
+        return ImageFont.truetype(DEF_FONT, pt)
     except Exception:
-        # fallback: decode-count
-        try:
-            n = 0
-            for _ in iio.imiter(video_path):
-                n += 1
-            return 30.0, n
-        except Exception:
-            return 30.0, None
+        return ImageFont.load_default()
 
-def make_caption_getter(cap_map):
-    """
-    Return a function get_caption(idx)->str that works for:
-      - dict {"0": "txt", ...} or {0: "txt", ...}
-      - list ["txt0", "txt1", ...]
-      - list of dicts [{"caption": "txt0"}, ...] or [{"text": "txt0"}, ...]
-    """
-    if isinstance(cap_map, dict):
-        # normalize keys to str
-        return lambda i: cap_map.get(str(i), cap_map.get(i, ""))
-    if isinstance(cap_map, list):
-        # list of strings?
-        if all(isinstance(x, str) for x in cap_map):
-            return lambda i: cap_map[i] if 0 <= i < len(cap_map) else ""
-        # list of dicts with 'caption' or 'text' field?
-        if all(isinstance(x, dict) for x in cap_map):
-            def _get(i):
-                if 0 <= i < len(cap_map):
-                    d = cap_map[i]
-                    return d.get("caption") or d.get("text") or ""
-                return ""
-            return _get
-    # unknown shape
-    return lambda i: ""
+def text_wrap(draw, text, font, max_width):
+    if not text:
+        return [""]
+    words = text.split()
+    lines, cur = [], []
+    for w in words:
+        test = (" ".join(cur + [w])).strip()
+        wpx = draw.textlength(test, font=font)
+        if wpx <= max_width or not cur:
+            cur.append(w)
+        else:
+            lines.append(" ".join(cur))
+            cur = [w]
+    if cur:
+        lines.append(" ".join(cur))
+    return lines
+
+def fit_caption(draw, text, target_width, max_lines, start_pt):
+    pt = start_pt
+    while pt >= 10:
+        font = load_font(pt)
+        lines = text_wrap(draw, text, font, target_width)
+        if len(lines) <= max_lines:
+            ascent, descent = font.getmetrics()
+            h = (ascent + descent) * len(lines)
+            if h <= 0.4 * target_width:
+                return font, lines
+        pt -= 2
+    font = load_font(10)
+    return font, text_wrap(draw, text, font, target_width)
+
+def draw_caption_box(draw, xy, w, h, radius=10, fill=(0,0,0,180)):
+    x, y = xy
+    r = min(radius, int(min(w,h)/3))
+    draw.rounded_rectangle([x, y, x+w, y+h], radius=r, fill=fill)
+
+def draw_text_with_outline(draw, xy, lines, font, fill=(255,255,255,255), outline=(0,0,0,255), line_spacing_scale=1.05):
+    x, y = xy
+    # robust line height
+    bbox = font.getbbox("Ay")
+    lh = (bbox[3] - bbox[1])
+    lh = int(lh * line_spacing_scale)
+    for i, line in enumerate(lines):
+        yy = y + i * lh
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            draw.text((x+dx, yy+dy), line, font=font, fill=outline)
+        draw.text((x, yy), line, font=font, fill=fill)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--video", required=True, help="Input MP4")
-    ap.add_argument("--captions", required=True, help="JSON mapping/list of captions per frame")
-    ap.add_argument("--out", required=True, help="Output MP4 with burned captions")
-    ap.add_argument("--fontsize", type=int, default=18)
+    ap.add_argument("--video", required=True)
+    ap.add_argument("--captions", required=True, help="JSON: list(str) or dict frame->str")
+    ap.add_argument("--out", required=True)
+    ap.add_argument("--font_size", type=int, default=28)
+    ap.add_argument("--max_width_pct", type=float, default=0.9)
+    ap.add_argument("--max_lines", type=int, default=3)
+    ap.add_argument("--margin_px", type=int, default=14)
+    ap.add_argument("--line_spacing_scale", type=float, default=1.05)
     args = ap.parse_args()
 
+    t0 = time.time()
+
     with open(args.captions, "r") as f:
-        cap_map = json.load(f)
+        cdata = json.load(f)
+    if isinstance(cdata, dict):
+        max_idx = max(int(k) for k in cdata.keys()) if cdata else -1
+        caps = [cdata.get(str(i), "") for i in range(max_idx+1)]
+    else:
+        caps = list(cdata)
 
-    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+    reader = iio.imiter(args.video)
+    meta = iio.immeta(args.video)
+    fps = float(meta.get("fps", 30))
+    first = next(reader)
+    H, W = first.shape[:2]
 
-    fps, _ = probe_meta(args.video)
-    font = load_font(args.fontsize)
-    get_caption = make_caption_getter(cap_map)
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    writer = imageio.get_writer(args.out, fps=fps, codec="libx264", quality=9)
 
-    reader = iio_v2.get_reader(args.video, format='ffmpeg')
-    writer = imageio.get_writer(
-        args.out,
-        fps=fps,
-        codec="libx264",
-        format="FFMPEG",
-        pixelformat="yuv420p",
-        quality=8,
-    )
+    # re-open to include frame 0
+    reader = iio.imiter(args.video)
 
-    try:
-        idx = 0
-        for frame in reader:
-            img = Image.fromarray(frame)
-            txt = get_caption(idx)
-            img = draw_caption(img, txt, font)
-            writer.append_data(np.asarray(img))
-            idx += 1
-    finally:
-        try:
-            reader.close()
-        except Exception:
-            pass
-        writer.close()
+    max_text_width = int(W * args.max_width_pct)
+    margin = args.margin_px
+
+    count = 0
+    for idx, frame in enumerate(reader):
+        img = Image.fromarray(frame).convert("RGBA")
+        overlay = Image.new("RGBA", img.size, (0,0,0,0))
+        draw = ImageDraw.Draw(overlay)
+
+        text = caps[idx] if idx < len(caps) else ""
+
+        font, lines = fit_caption(draw, text, target_width=max_text_width, max_lines=args.max_lines, start_pt=args.font_size)
+
+        bbox = font.getbbox("Ay")
+        lh = (bbox[3] - bbox[1])
+        lh = int(lh * args.line_spacing_scale)
+        text_w = max((draw.textlength(line, font=font) for line in lines), default=0)
+        text_h = lh * max(1, len(lines))
+
+        box_w = int(text_w + 2*margin)
+        box_h = int(text_h + 2*margin)
+        x = max((W - box_w)//2, margin)
+        y = max(H - box_h - margin, margin)
+
+        draw_caption_box(draw, (x, y), box_w, box_h, radius=10, fill=(0,0,0,180))
+        text_x, text_y = x + margin, y + margin
+        draw_text_with_outline(draw, (text_x, text_y), lines, font, line_spacing_scale=args.line_spacing_scale)
+
+        composed = Image.alpha_composite(img, overlay).convert("RGB")
+        writer.append_data(np.asarray(composed))
+        count += 1
+
+    writer.close()
+    dur = time.time() - t0
+    print(f"Caption burn complete: wrote {count} frames to {args.out}")
+    print(f"Runtime: {dur:.2f} sec  |  FPS: {count/max(dur,1e-6):.1f}")
 
 if __name__ == "__main__":
     main()
